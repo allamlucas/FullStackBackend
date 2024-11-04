@@ -1,0 +1,1 @@
+mongodb+srv://fullstack:16572856@cluster0.5jwdd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
