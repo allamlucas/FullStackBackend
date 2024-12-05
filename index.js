@@ -1,70 +1,111 @@
+require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
-const cors = require('cors')
-const app = express();
-app.use(express.static('dist'))
+const cors = require('cors');
+const mongoose = require('mongoose');
+const Person = require('./models/person.js');
 
-app.use(cors())
-app.use(express.json()); 
+const app = express();
+
+app.use(express.static('dist'));
+app.use(cors());
+app.use(express.json());
 app.use(morgan('tiny'));
 
-let persons = require('./persons.json');
+// Rutas
+app.get('/api/persons', async (request, response, next) => {
+  try {
+    const personas = await Person.find({});
+    response.json(personas);
+  } catch (error) {
+    next(error);
+  }
+});
 
-app.get('/', (request, response) => {
-    response.send('<h1>Hello World!</h1>')
-})
-
-app.get('/api/persons', (request, response) => {
-    response.json(persons)
-})
-
-app.get('/info', (request, response) => {
-    response.send(
-        `<div>
-  <p>phonebook has info for ${persons.length} persons</p>
-  <p>${Date()}</p>
-  </div>`
-    )
-})
-
-
-app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const persona = persons.find(persona => persona.id === id)
-    if (persona) {
-      response.json(persona)
+app.get('/api/persons/:id', async (request, response, next) => {
+  try {
+    const person = await Person.findById(request.params.id);
+    if (person) {
+      response.json(person);
     } else {
-      response.status(404).end()
+      response.status(404).end();
     }
-  })
+  } catch (error) {
+    next(error);
+  }
+});
 
+app.post('/api/persons', async (request, response, next) => {
+  const { name, number } = request.body;
 
-  app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(persona => persona.id !== id)
-  
-    response.status(204).end()
-  })
+  if (!name || !number) {
+    return response.status(400).json({
+      error: 'name or number missing'
+    });
+  }
 
-  app.post('/api/persons', (request, response) => {
-    const persona = request.body
-    if (!persona.name || !persona.number) {
-        return response.status(400).json({
-            error: 'name or number missing'
-        })
-    }if(persons.find((nombre)=> nombre.name === persona.name)){
-        return response.status(400).json({
-            error: 'NAME EXISTING'
-        })      
-    }else
-    persona.id = Math.floor(Math.random() * 10000)
-    persons = persons.concat(persona)
-    response.json(persona)
-})
-  
+  try {
+    const existingPerson = await Person.findOne({ name });
+    if (existingPerson) {
+      return response.status(400).json({
+        error: 'name already exists'
+      });
+    }
 
+    const persona = new Person({ name, number });
+    const savedPerson = await persona.save();
+    response.json(savedPerson);
+  } catch (error) {
+    next(error);
+  }
+});
 
-const PORT = process.env.PORT || 3001
+app.put('/api/persons/:id', async (request, response, next) => {
+  const { name, number } = request.body;
+
+  try {
+    const updatedPerson = await Person.findByIdAndUpdate(
+      request.params.id,
+      { name, number },
+      { new: true, runValidators: true, context: 'query' }
+    );
+    if (updatedPerson) {
+      response.json(updatedPerson);
+    } else {
+      response.status(404).end();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/persons/:id', async (request, response, next) => {
+  try {
+    await Person.findByIdAndDelete(request.params.id);
+    response.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Middleware de manejo de errores
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'Malformatted ID' });
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).send({ error: error.message });
+  }
+
+  response.status(500).send({ error: 'Internal Server Error' });
+};
+
+// Usar el middleware de manejo de errores
+app.use(errorHandler);
+
+// Iniciar el servidor
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
