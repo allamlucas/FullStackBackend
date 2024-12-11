@@ -8,12 +8,23 @@
         "morgan": "^1.10.0"
     },
     "devDependencies": {
-        "nodemon": "^3.1.0"
+        "@eslint/js": "^9.16.0",
+        "@stylistic/eslint-plugin-js": "^2.12.1",
+        "@typescript-eslint/eslint-plugin": "^8.18.0",
+        "@typescript-eslint/parser": "^8.18.0",
+        "eslint": "^9.16.0",
+        "eslint-plugin-react": "^7.37.2",
+        "eslint-plugin-vue": "^9.32.0",
+        "globals": "^15.13.0",
+        "nodemon": "^3.1.0",
+        "typescript-eslint": "^8.18.0"
     },
     "scripts": {
         "start": "node index.js",
         "dev": "nodemon index.js",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "server": "json-server -p3002 --watch persons.json"
+        "server": "json-server -p3002 --watch persons.json",
+        "lint": "eslint .",
+        "lint-fix": "eslint --fix"
     }
 }
